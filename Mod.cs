@@ -47,14 +47,14 @@ namespace RealisticVehicleColors
         // Called from the Apply settings button in Options. Setter runs on the
         // main thread (UI click), but ECS structural changes must wait for our
         // PrefabUpdate phase — so we just flag the system and let OnUpdate do it.
-        public static void RequestLiveRebalance()
+        public static void RequestLiveApply()
         {
             if (System == null)
             {
-                log.Warn("RequestLiveRebalance: system not yet registered, ignoring.");
+                log.Warn("RequestLiveApply: system not yet registered, ignoring.");
                 return;
             }
-            System.RequestLiveRefresh();
+            System.RequestLiveApply();
         }
     }
 }

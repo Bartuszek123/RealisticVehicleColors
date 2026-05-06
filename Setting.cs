@@ -48,10 +48,12 @@ namespace RealisticVehicleColors
         [SettingsUIWarning(typeof(Setting), nameof(AreColorSlidersAllZero))]
         public bool UseCustomColors { get; set; }
 
+        // Visible regardless of the master toggle: with master OFF, Apply restores
+        // every in-world car to the stock color mix (otherwise they'd stay frozen on
+        // whatever was rebalanced last).
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
         [SettingsUIButton]
-        public bool ApplySettings { set { Mod.RequestLiveRebalance(); } }
+        public bool ApplySettings { set { Mod.RequestLiveApply(); } }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]

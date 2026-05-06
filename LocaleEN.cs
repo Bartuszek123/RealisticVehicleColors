@@ -52,7 +52,7 @@ namespace RealisticVehicleColors
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.UseCustomColors)), "Every color slider is at 0, so the mod can't pick anything. Traffic will fall back to a uniform mix of stock colors. Move at least one slider above 0, or press Reset color sliders." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ApplySettings)),   "Apply settings" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Push your sliders, custom colors and toggles to the game right away — no restart needed. Newly spawned vehicles use the new mix; cars already on the map keep their colors until they despawn." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Push your sliders, custom colors and toggles to the game right away — no restart needed. Cars already on the map re-roll their color so the change is visible immediately. With the mod turned off, this restores the stock color mix on every car." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetToDefaults)), "Reset color sliders" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Put every color slider back to the mod's recommended real-world values. Custom-color slots and the other settings are left alone. Press Apply settings afterwards to push the change to the game." },

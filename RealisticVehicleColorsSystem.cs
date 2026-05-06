@@ -1,4 +1,5 @@
 using Game;
+using Game.Common;
 using Game.Prefabs;
 using Game.Rendering;
 using System;
@@ -40,16 +41,21 @@ namespace RealisticVehicleColors
         // Parent civilian-vehicle prefabs that haven't been dumped yet.
         private EntityQuery m_DumpQuery;
         // Civilian-vehicle prefabs that already carry RebalancedTag — used to bulk-strip
-        // the tag when the user hits Apply settings, so the next OnUpdate's rebalance
-        // pass picks them up again with fresh slider values.
+        // the tag when the user hits Apply settings (master ON), so the next OnUpdate's
+        // rebalance pass picks them up again with fresh slider values; also iterated by
+        // the restore pass when Apply is pressed with master OFF.
         private EntityQuery m_StripTagQuery;
+        // In-world vehicle instances. After rebalance / restore touches the prefab
+        // buffer, we add BatchesUpdated to these so MeshColorSystem re-rolls each
+        // instance's MeshColor from the updated ColorVariation buffer.
+        private EntityQuery m_VehicleInstanceQuery;
         private PrefabSystem m_PrefabSystem;
 
-        // Set from the UI thread by Mod.RequestLiveRebalance(); read and cleared
-        // on the next OnUpdate (PrefabUpdate phase, where structural ECS changes
-        // are safe). Bool writes are atomic on x86/x64 — volatile is enough.
-        private volatile bool m_NeedsLiveRefresh;
-        public void RequestLiveRefresh() => m_NeedsLiveRefresh = true;
+        // Set from the UI thread by Mod.RequestLiveApply(); read and cleared on
+        // the next OnUpdate (PrefabUpdate phase, where structural ECS changes are
+        // safe). Bool writes are atomic on x86/x64 — volatile is enough.
+        private volatile bool m_NeedsLiveApply;
+        public void RequestLiveApply() => m_NeedsLiveApply = true;
 
         // Snapshot of each SubMesh entity's original m_Probability values, captured
         // before Rebalance ever mutates the buffer. Lets the dump emit pristine
@@ -97,6 +103,21 @@ namespace RealisticVehicleColors
                 All = allCommonWithTag,
                 Any = anyCivilian,
             });
+            // Vehicle = Game.Vehicles.Vehicle, the "this entity is a vehicle instance" tag.
+            // MeshColor lives on the instance and is what MeshColorSystem refreshes.
+            m_VehicleInstanceQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Game.Vehicles.Vehicle>(),
+                    ComponentType.ReadOnly<MeshColor>(),
+                    ComponentType.ReadOnly<PrefabRef>(),
+                },
+                None = new ComponentType[]
+                {
+                    ComponentType.ReadOnly<Deleted>(),
+                },
+            });
         }
 
         [Preserve]
@@ -107,45 +128,51 @@ namespace RealisticVehicleColors
 
             var em = EntityManager;
 
-            // Live refresh: user clicked Apply in Options. Strip RebalancedTag from
-            // every civilian-vehicle prefab so the rebalance query below picks them
-            // up again with the current slider values. Bulk remove is one structural
-            // change for the whole archetype — much cheaper than per-entity.
-            if (m_NeedsLiveRefresh)
+            bool liveApply = m_NeedsLiveApply;
+            if (liveApply) m_NeedsLiveApply = false;
+            bool dump = settings.DumpColorVariations;
+            bool enabled = settings.Enabled;
+
+            // Bulk remove = one structural change per archetype, much cheaper
+            // than per-entity. Rebalance pass below picks the prefabs back up.
+            if (liveApply && enabled)
             {
-                m_NeedsLiveRefresh = false;
                 int n = m_StripTagQuery.CalculateEntityCount();
                 if (n > 0)
                 {
                     em.RemoveComponent<RebalancedTag>(m_StripTagQuery);
-                    Mod.log.Info($"Apply settings: cleared RebalancedTag from {n} civilian-vehicle prefabs.");
+                    Mod.log.Info($"Apply (master ON): cleared RebalancedTag from {n} civilian-vehicle prefabs.");
                 }
                 else
                 {
-                    Mod.log.Info("Apply settings: no rebalanced prefabs to refresh.");
+                    Mod.log.Info("Apply (master ON): no rebalanced prefabs to refresh.");
                 }
             }
+            else if (liveApply)
+            {
+                try { RunRestorePass(em); }
+                catch (Exception ex) { Mod.log.Error($"Restore pass failed: {ex}"); }
+            }
 
-            bool dump = settings.DumpColorVariations;
-            bool enabled = settings.Enabled;
-
-            int dumpQueryCount = m_DumpQuery.CalculateEntityCount();
-            int rebalanceQueryCount = m_RebalanceQuery.CalculateEntityCount();
-
-            // Pass 1: dump (independent from rebalance — runs over its own query).
-            // Run dump BEFORE rebalance on this frame so any prefab that hasn't been
-            // rebalanced yet is captured in its original state.
-            if (dump && dumpQueryCount > 0)
+            // Run dump BEFORE rebalance so any prefab that hasn't been rebalanced
+            // yet is captured in its original state.
+            if (dump && !m_DumpQuery.IsEmptyIgnoreFilter)
             {
                 try { RunDumpPass(em); }
                 catch (Exception ex) { Mod.log.Error($"Dump pass failed: {ex}"); }
             }
 
-            // Pass 2: rebalance — only when master switch is on.
-            if (enabled && rebalanceQueryCount > 0)
+            if (enabled && !m_RebalanceQuery.IsEmptyIgnoreFilter)
             {
                 try { RunRebalancePass(em, settings); }
                 catch (Exception ex) { Mod.log.Error($"Rebalance pass failed: {ex}"); }
+            }
+
+            // MUST run after the prefab buffers above are at their final state.
+            if (liveApply)
+            {
+                try { MarkInstancesDirty(em, settings); }
+                catch (Exception ex) { Mod.log.Error($"MarkInstancesDirty failed: {ex}"); }
             }
         }
 
@@ -193,6 +220,29 @@ namespace RealisticVehicleColors
             Mod.log.Info($"Dump pass: {prefabCount} prefabs, {submeshesDumped} submeshes, {variationsWritten} variations written");
         }
 
+        // Single source of truth for "is this a prefab the mod should rebalance?".
+        // Drift between the rebalance pass and the dirty-mark pass would silently
+        // de-sync prefab edits from instance re-rolls — keep both call-sites here.
+        // `isCamper`: CarTrailerData + PersonalCarData → restrict to white/brown.
+        private static bool ShouldRebalancePrefab(EntityManager em, Entity prefab, bool includeTrucks, out bool isCamper)
+        {
+            isCamper = false;
+            if (!em.HasComponent<CarData>(prefab)) return false;
+            bool isCar = em.HasComponent<PersonalCarData>(prefab);
+            bool isDelivery = em.HasComponent<DeliveryTruckData>(prefab);
+            bool isCargo = em.HasComponent<CargoTransportVehicleData>(prefab);
+            bool isTrailer = em.HasComponent<CarTrailerData>(prefab);
+            if (!(isCar || isDelivery || isCargo || isTrailer)) return false;
+            // Standalone trailers (semi-trailers, agri/forestry): semi-trailer paint
+            // reflects the cargo company, not the driver, and agri trailers ship
+            // with a single variation anyway.
+            if (isTrailer && !isCar) return false;
+            bool isTruck = isDelivery || isCargo;
+            if (isTruck && !isCar && !includeTrucks) return false;
+            isCamper = isCar && isTrailer;
+            return true;
+        }
+
         private void RunRebalancePass(EntityManager em, Setting settings)
         {
             var entities = m_RebalanceQuery.ToEntityArray(Allocator.Temp);
@@ -203,18 +253,7 @@ namespace RealisticVehicleColors
                 for (int i = 0; i < prefabCount; i++)
                 {
                     Entity prefab = entities[i];
-                    bool isCar = em.HasComponent<PersonalCarData>(prefab);
-                    bool isDelivery = em.HasComponent<DeliveryTruckData>(prefab);
-                    bool isCargo = em.HasComponent<CargoTransportVehicleData>(prefab);
-                    bool isTrailer = em.HasComponent<CarTrailerData>(prefab);
-                    bool isTruck = isDelivery || isCargo;
-                    // Trailers without PersonalCarData (semi-trailers, agri/forestry trailers) keep
-                    // their stock colors — semi-trailer paint reflects the cargo company, not the
-                    // driver, and agri trailers ship with a single variation anyway.
-                    bool isStandaloneTrailer = isTrailer && !isCar;
-                    bool skip = isStandaloneTrailer || (isTruck && !isCar && !settings.IncludeTrucks);
-
-                    if (!skip)
+                    if (ShouldRebalancePrefab(em, prefab, settings.IncludeTrucks, out bool isCamper))
                     {
                         var subMeshes = em.GetBuffer<SubMesh>(prefab, isReadOnly: true);
                         for (int s = 0; s < subMeshes.Length; s++)
@@ -223,9 +262,6 @@ namespace RealisticVehicleColors
                             if (sub == Entity.Null) continue;
                             if (!em.HasBuffer<ColorVariation>(sub)) continue;
                             SnapshotOriginalProbabilities(em, sub);
-                            // Camper trailer (CarTrailerData + PersonalCarData): restrict to
-                            // white/brown buckets — campers are typically beige or white IRL.
-                            bool isCamper = isCar && isTrailer;
                             Rebalance(em, sub, settings, isCamper);
                             touchedSubMeshes++;
                         }
@@ -239,6 +275,87 @@ namespace RealisticVehicleColors
                 entities.Dispose();
             }
             Mod.log.Info($"Rebalance pass: {prefabCount} prefabs, {touchedSubMeshes} submeshes touched");
+        }
+
+        // Without this, in-world cars stay frozen on the previous custom mix
+        // even after re-roll: MeshColor caches the picked variation per instance,
+        // and re-rolling against a still-rebalanced ColorVariation buffer would
+        // just pick from the same custom weights.
+        private void RunRestorePass(EntityManager em)
+        {
+            var entities = m_StripTagQuery.ToEntityArray(Allocator.Temp);
+            int prefabCount = entities.Length;
+            int restoredSubMeshes = 0;
+            try
+            {
+                for (int i = 0; i < prefabCount; i++)
+                {
+                    Entity prefab = entities[i];
+                    var subMeshes = em.GetBuffer<SubMesh>(prefab, isReadOnly: true);
+                    for (int s = 0; s < subMeshes.Length; s++)
+                    {
+                        Entity sub = subMeshes[s].m_SubMesh;
+                        if (sub == Entity.Null) continue;
+                        if (!em.HasBuffer<ColorVariation>(sub)) continue;
+                        if (RestoreSubMesh(em, sub)) restoredSubMeshes++;
+                    }
+                    em.RemoveComponent<RebalancedTag>(prefab);
+                }
+            }
+            finally
+            {
+                entities.Dispose();
+            }
+            Mod.log.Info($"Apply (master OFF): restored {prefabCount} prefabs, {restoredSubMeshes} submeshes.");
+        }
+
+        private bool RestoreSubMesh(EntityManager em, Entity sub)
+        {
+            var buffer = em.GetBuffer<ColorVariation>(sub);
+            // Trim any custom-color appends so the buffer matches the stock layout.
+            if (em.HasComponent<OriginalColorVariationCount>(sub))
+            {
+                int origCount = em.GetComponentData<OriginalColorVariationCount>(sub).Value;
+                if (buffer.Length > origCount)
+                    buffer.RemoveRange(origCount, buffer.Length - origCount);
+            }
+            if (!m_OrigProbabilities.TryGetValue(sub, out var snap)) return false;
+            int n = Math.Min(buffer.Length, snap.Length);
+            for (int i = 0; i < n; i++)
+            {
+                var entry = buffer[i];
+                entry.m_Probability = snap[i];
+                buffer[i] = entry;
+            }
+            return true;
+        }
+
+        // BatchesUpdated puts the instance on MeshColorSystem.m_UpdateQuery, which
+        // re-runs SetMeshColorsJob and re-picks from the updated ColorVariation
+        // buffer. Without it, instances stay on the MeshColor cached at spawn.
+        private void MarkInstancesDirty(EntityManager em, Setting settings)
+        {
+            var entities = m_VehicleInstanceQuery.ToEntityArray(Allocator.Temp);
+            var dirty = new NativeList<Entity>(entities.Length, Allocator.Temp);
+            try
+            {
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    Entity inst = entities[i];
+                    Entity prefab = em.GetComponentData<PrefabRef>(inst).m_Prefab;
+                    if (prefab == Entity.Null) continue;
+                    if (!ShouldRebalancePrefab(em, prefab, settings.IncludeTrucks, out _)) continue;
+                    dirty.Add(inst);
+                }
+                if (dirty.Length > 0)
+                    em.AddComponent<BatchesUpdated>(dirty.AsArray());
+                Mod.log.Info($"Marked {dirty.Length}/{entities.Length} vehicle instances dirty.");
+            }
+            finally
+            {
+                entities.Dispose();
+                dirty.Dispose();
+            }
         }
 
         private static StreamWriter OpenDumpWriter()
