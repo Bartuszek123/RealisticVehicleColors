@@ -51,12 +51,6 @@ namespace RealisticVehicleColors
         [SettingsUIButton]
         public bool ApplySettings { set { Mod.RequestLiveRebalance(); } }
 
-        [SettingsUISection(DefaultColorsTab, ColorsGroup)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
-        [SettingsUIButton]
-        [SettingsUIConfirmation]
-        public bool ResetToDefaults { set { SetDefaultColorWeights(); } }
-
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
@@ -106,6 +100,12 @@ namespace RealisticVehicleColors
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
         public int Other { get; set; }
+
+        [SettingsUISection(DefaultColorsTab, ColorsGroup)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIButton]
+        [SettingsUIConfirmation]
+        public bool ResetToDefaults { set { SetDefaultColorWeights(); } }
 
         // ── Custom colors ──────────────────────────────────────────────────────
         [SettingsUITextInput]
