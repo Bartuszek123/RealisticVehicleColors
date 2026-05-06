@@ -5,9 +5,21 @@ namespace RealisticVehicleColors
 {
     public class LocaleEN : IDictionarySource
     {
+        public LocaleEN(Setting setting) { m_Setting = setting; }
+
         private readonly Setting m_Setting;
 
-        public LocaleEN(Setting setting) { m_Setting = setting; }
+        // Shared text — sliders behave the same way across the Default and Custom tabs.
+        private const string SliderHowItWorks =
+            "These sliders are weights, not strict percentages — they don't have to add up to 100. The mod balances them for you.";
+        private const string CustomHexDesc =
+            "Six-digit hex code, like F58025 (with or without a leading #). Any online color picker can give you one. Leave the field empty or set Probability to 0 to turn this slot off.";
+        private const string CustomHexWarning =
+            "This hex code is empty or invalid. The slot will be skipped until you enter a valid six-digit hex (e.g. F58025), or set Probability back to 0 to silence this warning.";
+        private const string CustomNameDesc =
+            "A name you'll recognise for this color. Shown only here in Options — it doesn't appear anywhere in-game.";
+        private const string CustomProbabilityDesc =
+            "How often cars get this custom color. Works just like the sliders on the Default Colors tab and competes against them. Set to 0 to turn this slot off.";
 
         public IEnumerable<KeyValuePair<string, string>> ReadEntries(
             IList<IDictionaryEntryError> errors,
@@ -30,54 +42,78 @@ namespace RealisticVehicleColors
                 { m_Setting.GetOptionGroupLocaleID(Setting.DebugGroup),           "Debug Tools" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Enabled)),      "Enabled" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Enabled)),       "Master switch. When off, the mod leaves vehicle colors untouched. Restart the game for changes to take effect." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Enabled)),       "Main on/off switch for the whole mod. Turn off to leave vehicle colors at the game's stock palette. Restart the game for the change to fully apply." },
 
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.IncludeTrucks)),"Include civilian trucks" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.IncludeTrucks)), "Also rebalance delivery vans, cargo trucks and food-delivery scooters. Service vehicles (police, fire, ambulance, garbage, post, taxi, transit) are never touched. Cargo trailers and farm equipment keep their stock paintwork." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.IncludeTrucks)),"Include trucks and vans" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.IncludeTrucks)), "Apply the new colors to delivery vans, cargo trucks and food-delivery scooters too. Service vehicles (police, fire, ambulance, garbage, post, taxi, transit) and farm equipment are never touched." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.UseCustomColors)), "Use custom color values" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.UseCustomColors)),  "When off, the mod uses its built-in real-world color distribution. Turn on to reveal the per-color sliders and apply your own values. Toggling this on or off never changes the slider values — to restore the recommended mix, press Reset color sliders." },
-                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.UseCustomColors)), "Every color slider is at 0. The mod will fall back to a uniform stock distribution. Adjust at least one slider above 0, or press Reset color sliders." },
-
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetToDefaults)), "Reset color sliders" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Restore the color sliders below to the mod's recommended real-world values. Custom-color slots and other settings are not affected. Press Apply settings afterwards to push the change to the game." },
-                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.ResetToDefaults)),"All your slider tweaks will be replaced with the mod's recommended values. Continue?" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.UseCustomColors)),  "Off: the mod picks the color mix automatically using real-world car-color statistics. On: the sliders below appear so you can tune the mix yourself. " + SliderHowItWorks },
+                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.UseCustomColors)), "Every color slider is at 0, so the mod can't pick anything. Traffic will fall back to a uniform mix of stock colors. Move at least one slider above 0, or press Reset color sliders." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ApplySettings)),   "Apply settings" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Push the current sliders, custom colors and toggles to the game without restarting. Newly spawned vehicles use the new distribution; cars already on the map keep their old colors until they despawn." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Push your sliders, custom colors and toggles to the game right away — no restart needed. Newly spawned vehicles use the new mix; cars already on the map keep their colors until they despawn." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetToDefaults)), "Reset color sliders" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Put every color slider back to the mod's recommended real-world values. Custom-color slots and the other settings are left alone. Press Apply settings afterwards to push the change to the game." },
+                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.ResetToDefaults)),"All your slider tweaks will be replaced with the mod's recommended values. Continue?" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DumpColorVariations)),"Dump color variations" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.DumpColorVariations)), "Debug tool. When on, the mod writes the game's stock vehicle colors to a CSV file in its data folder on the next save load. Useful for inspecting what the game ships with. Disable after capturing." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.DumpColorVariations)), "Developer tool — most users can ignore this. When on, the mod writes a CSV listing of every vehicle's stock colors to its data folder on the next save load. Turn it off after the file appears." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.White)),        "White" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Black)),        "Black" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Grey)),         "Grey" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Silver)),       "Silver" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Red)),          "Red" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Blue)),         "Blue" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Brown)),        "Brown / Beige" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Green)),        "Green" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Yellow)),       "Yellow" },
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Other)),        "Other" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.White)),         "How often white cars appear in traffic." },
 
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.White)),         "Relative weight for white vehicles. Sliders normalize against each other — they don't have to sum to 100. Restart the game to apply." },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Other)),         "Catch-all for colors that don't fit the named buckets (orange, purple, magenta, pink, etc.)." },
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Black)),        "Black" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Black)),         "How often black cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Grey)),         "Grey" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Grey)),          "How often grey cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Silver)),       "Silver" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Silver)),        "How often silver cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Red)),          "Red" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Red)),           "How often red cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Blue)),         "Blue" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Blue)),          "How often blue cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Brown)),        "Brown / Beige" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Brown)),         "How often brown, beige and tan cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Green)),        "Green" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Green)),         "How often green cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Yellow)),       "Yellow" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Yellow)),        "How often yellow cars appear in traffic." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Other)),        "Other" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Other)),         "How often unusual colors appear — orange, purple, magenta, pink and anything else that doesn't fit the buckets above." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Name)),  "Name" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Name)),   CustomNameDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Hex)),   "Hex code" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Hex)),    CustomHexDesc },
+                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom1Hex)), CustomHexWarning },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Probability)), "Probability" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Hex)),    "Six-digit hex like F58025 (with or without leading #). Leave empty or set Probability to 0 to disable this slot." },
-                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom1Hex)), "This hex code is empty or invalid. The slot will be skipped until you enter a valid six-digit hex (e.g. F58025), or set Probability back to 0 to silence this warning." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Probability)),  CustomProbabilityDesc },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Name)),  "Name" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Name)),   CustomNameDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Hex)),   "Hex code" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Hex)),    CustomHexDesc },
+                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom2Hex)), CustomHexWarning },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Probability)), "Probability" },
-                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom2Hex)), "This hex code is empty or invalid. The slot will be skipped until you enter a valid six-digit hex (e.g. F58025), or set Probability back to 0 to silence this warning." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Probability)),  CustomProbabilityDesc },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom3Name)),  "Name" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom3Name)),   CustomNameDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom3Hex)),   "Hex code" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom3Hex)),    CustomHexDesc },
+                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom3Hex)), CustomHexWarning },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom3Probability)), "Probability" },
-                { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom3Hex)), "This hex code is empty or invalid. The slot will be skipped until you enter a valid six-digit hex (e.g. F58025), or set Probability back to 0 to silence this warning." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom3Probability)),  CustomProbabilityDesc },
             };
         }
 
