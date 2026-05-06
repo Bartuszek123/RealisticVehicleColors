@@ -1,6 +1,8 @@
 using Colossal.IO.AssetDatabase;
 using Game.Modding;
 using Game.Settings;
+using Game.UI.Localization;
+using UnityEngine;
 
 namespace RealisticVehicleColors
 {
@@ -54,51 +56,71 @@ namespace RealisticVehicleColors
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetWhiteLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int White { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetBlackLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Black { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetGreyLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Grey { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetSilverLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Silver { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetRedLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Red { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetBlueLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Blue { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetBrownLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Brown { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetGreenLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Green { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetYellowLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Yellow { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetOtherLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Other { get; set; }
 
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
@@ -174,6 +196,66 @@ namespace RealisticVehicleColors
         public bool IsCustom1HexInvalid() => Custom1Probability > 0 && !ColorClassifier.TryParseHex(Custom1Hex, out _);
         public bool IsCustom2HexInvalid() => Custom2Probability > 0 && !ColorClassifier.TryParseHex(Custom2Hex, out _);
         public bool IsCustom3HexInvalid() => Custom3Probability > 0 && !ColorClassifier.TryParseHex(Custom3Hex, out _);
+
+        // Live "(~X%)" suffix on each color slider's label. Total denominator includes
+        // both default-color sliders and any custom slot with probability > 0 — that
+        // matches what AppendCustom does in Rebalance, so the displayed % stays close
+        // to what the user actually sees in traffic. Hex validity isn't checked here:
+        // if a slot has probability > 0 but a broken hex it still pulls share away in
+        // intent — the [SettingsUIWarning] on the hex field handles that misconfig.
+        private int GetTotalSliderWeight()
+        {
+            int total = White + Black + Grey + Silver + Red + Blue + Brown + Green + Yellow + Other;
+            if (Custom1Probability > 0) total += Custom1Probability;
+            if (Custom2Probability > 0) total += Custom2Probability;
+            if (Custom3Probability > 0) total += Custom3Probability;
+            return total;
+        }
+
+        private LocalizedString MakeColorLabel(string name, int weight)
+        {
+            int total = GetTotalSliderWeight();
+            if (total <= 0 || weight <= 0) return LocalizedString.Value(name);
+            float pct = weight * 100f / total;
+            string suffix = pct < 1f ? "<1%" : $"~{Mathf.RoundToInt(pct)}%";
+            return LocalizedString.Value($"{name} ({suffix})");
+        }
+
+        public LocalizedString GetWhiteLabel()  => MakeColorLabel("White",         White);
+        public LocalizedString GetBlackLabel()  => MakeColorLabel("Black",         Black);
+        public LocalizedString GetGreyLabel()   => MakeColorLabel("Grey",          Grey);
+        public LocalizedString GetSilverLabel() => MakeColorLabel("Silver",        Silver);
+        public LocalizedString GetRedLabel()    => MakeColorLabel("Red",           Red);
+        public LocalizedString GetBlueLabel()   => MakeColorLabel("Blue",          Blue);
+        public LocalizedString GetBrownLabel()  => MakeColorLabel("Brown / Beige", Brown);
+        public LocalizedString GetGreenLabel()  => MakeColorLabel("Green",         Green);
+        public LocalizedString GetYellowLabel() => MakeColorLabel("Yellow",        Yellow);
+        public LocalizedString GetOtherLabel()  => MakeColorLabel("Other",         Other);
+
+        // Version bumps any time something the labels depend on changes, so the
+        // settings-UI widget re-evaluates the dynamic display name. Including custom
+        // probabilities since they shift the denominator.
+        public int GetSliderVersion()
+        {
+            unchecked
+            {
+                int h = 17;
+                h = h * 31 + White;
+                h = h * 31 + Black;
+                h = h * 31 + Grey;
+                h = h * 31 + Silver;
+                h = h * 31 + Red;
+                h = h * 31 + Blue;
+                h = h * 31 + Brown;
+                h = h * 31 + Green;
+                h = h * 31 + Yellow;
+                h = h * 31 + Other;
+                h = h * 31 + Custom1Probability;
+                h = h * 31 + Custom2Probability;
+                h = h * 31 + Custom3Probability;
+                return h;
+            }
+        }
 
         // Real-world car-color distribution, rounded. Used both as slider defaults
         // and as the live values when UseCustomColors is OFF.
