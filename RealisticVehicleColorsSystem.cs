@@ -39,7 +39,17 @@ namespace RealisticVehicleColors
         private EntityQuery m_RebalanceQuery;
         // Parent civilian-vehicle prefabs that haven't been dumped yet.
         private EntityQuery m_DumpQuery;
+        // Civilian-vehicle prefabs that already carry RebalancedTag — used to bulk-strip
+        // the tag when the user hits Apply settings, so the next OnUpdate's rebalance
+        // pass picks them up again with fresh slider values.
+        private EntityQuery m_StripTagQuery;
         private PrefabSystem m_PrefabSystem;
+
+        // Set from the UI thread by Mod.RequestLiveRebalance(); read and cleared
+        // on the next OnUpdate (PrefabUpdate phase, where structural ECS changes
+        // are safe). Bool writes are atomic on x86/x64 — volatile is enough.
+        private volatile bool m_NeedsLiveRefresh;
+        public void RequestLiveRefresh() => m_NeedsLiveRefresh = true;
 
         // Snapshot of each SubMesh entity's original m_Probability values, captured
         // before Rebalance ever mutates the buffer. Lets the dump emit pristine
@@ -79,6 +89,14 @@ namespace RealisticVehicleColors
                 Any = anyCivilian,
                 None = new ComponentType[] { ComponentType.ReadOnly<DumpedTag>() },
             });
+            var allCommonWithTag = new ComponentType[allCommon.Length + 1];
+            for (int i = 0; i < allCommon.Length; i++) allCommonWithTag[i] = allCommon[i];
+            allCommonWithTag[allCommon.Length] = ComponentType.ReadOnly<RebalancedTag>();
+            m_StripTagQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = allCommonWithTag,
+                Any = anyCivilian,
+            });
         }
 
         [Preserve]
@@ -87,13 +105,32 @@ namespace RealisticVehicleColors
             var settings = Mod.Settings;
             if (settings == null) return;
 
+            var em = EntityManager;
+
+            // Live refresh: user clicked Apply in Options. Strip RebalancedTag from
+            // every civilian-vehicle prefab so the rebalance query below picks them
+            // up again with the current slider values. Bulk remove is one structural
+            // change for the whole archetype — much cheaper than per-entity.
+            if (m_NeedsLiveRefresh)
+            {
+                m_NeedsLiveRefresh = false;
+                int n = m_StripTagQuery.CalculateEntityCount();
+                if (n > 0)
+                {
+                    em.RemoveComponent<RebalancedTag>(m_StripTagQuery);
+                    Mod.log.Info($"Apply settings: cleared RebalancedTag from {n} civilian-vehicle prefabs.");
+                }
+                else
+                {
+                    Mod.log.Info("Apply settings: no rebalanced prefabs to refresh.");
+                }
+            }
+
             bool dump = settings.DumpColorVariations;
             bool enabled = settings.Enabled;
 
             int dumpQueryCount = m_DumpQuery.CalculateEntityCount();
             int rebalanceQueryCount = m_RebalanceQuery.CalculateEntityCount();
-
-            var em = EntityManager;
 
             // Pass 1: dump (independent from rebalance — runs over its own query).
             // Run dump BEFORE rebalance on this frame so any prefab that hasn't been

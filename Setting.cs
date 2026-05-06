@@ -47,6 +47,11 @@ namespace RealisticVehicleColors
         public bool UseCustomColors { get; set; }
 
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        [SettingsUIButton]
+        public bool ApplySettings { set { Mod.RequestLiveRebalance(); } }
+
+        [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
         [SettingsUIButton]
         [SettingsUIConfirmation]

@@ -40,8 +40,11 @@ namespace RealisticVehicleColors
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.UseCustomColors)), "Every color slider is at 0. The mod will fall back to a uniform stock distribution. Adjust at least one slider above 0, or press Reset color sliders." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetToDefaults)), "Reset color sliders" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Restore the color sliders below to the mod's recommended real-world values. Custom-color slots and other settings are not affected. Restart the game to repaint vehicles." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Restore the color sliders below to the mod's recommended real-world values. Custom-color slots and other settings are not affected. Press Apply settings afterwards to push the change to the game." },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.ResetToDefaults)),"All your slider tweaks will be replaced with the mod's recommended values. Continue?" },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ApplySettings)),   "Apply settings" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Push the current sliders, custom colors and toggles to the game without restarting. Newly spawned vehicles use the new distribution; cars already on the map keep their old colors until they despawn." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DumpColorVariations)),"Dump color variations" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.DumpColorVariations)), "Debug tool. When on, the mod writes the game's stock vehicle colors to a CSV file in its data folder on the next save load. Useful for inspecting what the game ships with. Disable after capturing." },

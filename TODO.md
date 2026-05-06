@@ -20,7 +20,8 @@ User decided 2026-05-06: finish remaining v1.x items first, release on PDX Mods 
 
 ## v2 — bigger work
 
-- [ ] **Live slider updates.** Removing `RebalancedTag` from prefabs when settings change and re-running rebalance, so users don't have to restart the game. Plus tagging existing vehicle instances `BatchesUpdated` so they re-render with new colors. WIKI.md §7 caveat: would need explicit refresh of cached instance state. Confirmed empirically that main-menu → load is NOT enough — only a full game restart resets prefab tags.
+- [x] **Live slider updates (newly spawned cars).** "Apply settings" button on Default Colors tab → `Mod.RequestLiveRebalance()` sets `volatile bool m_NeedsLiveRefresh` on the system → next `OnUpdate` (PrefabUpdate phase) bulk-strips `RebalancedTag` via `EntityManager.RemoveComponent<T>(query)` → existing rebalance pass re-runs with current slider values. Implemented on the `live-update` branch.
+- [ ] **Live refresh of in-world car instances.** Today's "Apply settings" only affects newly spawned vehicles. Cars already on the map keep their old colors until they despawn. WIKI.md §7 caveat: would need to dirty cached `MeshColor` state on each existing instance (probably `BatchesUpdated` flag).
 - [ ] **Empty-bucket synthesis.** Today only custom slots add new ColorVariation entries. If a prefab has zero red variations and the user pushes Red slider high, that slider has nothing to weight. Could synthesize a neutral red entry per prefab to give every slider some traction.
 - [ ] **HSV cutoff tuning.** Thresholds in `ColorBuckets.cs` were guessed. Revisit after eyeballing in-traffic results — especially the brown / yellow / orange / red boundaries.
 
