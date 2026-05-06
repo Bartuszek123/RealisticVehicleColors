@@ -1,0 +1,15 @@
+# Build outputs
+bin/
+obj/
+Library/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Decompiled CS2 reference (large, regenerable from game install)
+_research/decompiled/
+
+# Local Claude Code state
+.claude/
