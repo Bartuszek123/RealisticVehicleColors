@@ -10,6 +10,7 @@ namespace RealisticVehicleColors
     {
         public static ILog log = LogManager.GetLogger($"{nameof(RealisticVehicleColors)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
         public static Setting Settings { get; private set; }
+        public static RealisticVehicleColorsSystem System { get; private set; }
 
         public void OnLoad(UpdateSystem updateSystem)
         {
@@ -29,6 +30,7 @@ namespace RealisticVehicleColors
             AssetDatabase.global.LoadSettings(nameof(RealisticVehicleColors), Settings, defaults);
 
             updateSystem.UpdateAt<RealisticVehicleColorsSystem>(SystemUpdatePhase.PrefabUpdate);
+            System = updateSystem.World.GetExistingSystemManaged<RealisticVehicleColorsSystem>();
         }
 
         public void OnDispose()
@@ -39,6 +41,20 @@ namespace RealisticVehicleColors
                 Settings.UnregisterInOptionsUI();
                 Settings = null;
             }
+            System = null;
+        }
+
+        // Called from the Apply settings button in Options. Setter runs on the
+        // main thread (UI click), but ECS structural changes must wait for our
+        // PrefabUpdate phase — so we just flag the system and let OnUpdate do it.
+        public static void RequestLiveApply()
+        {
+            if (System == null)
+            {
+                log.Warn("RequestLiveApply: system not yet registered, ignoring.");
+                return;
+            }
+            System.RequestLiveApply();
         }
     }
 }

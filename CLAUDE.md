@@ -24,8 +24,13 @@ What's done:
 - Snapshot of original `m_Probability` so the dump always emits stock data even if rebalance ran first.
 
 Known limitations (NOT bugs — accepted for v1):
-- **Slider changes require a full game restart**, not just main-menu → load. Prefab tags survive main-menu transitions in CS2's world model.
-- **Existing in-world cars keep their old color**; only newly spawned vehicles get the new distribution. Fleet rotates over a few minutes of in-game time at 3× speed.
+- **Existing in-world cars keep their old color**; only newly spawned vehicles get the new distribution. Fleet rotates over a few minutes of in-game time at 3× speed. (Refreshing in-world instances would need explicit dirty-state on cached MeshColor — see WIKI.md §7.)
+
+**Live update (post-v1, on `live-update` branch — verified in-game 2026-05-06):** instead of relying on `onSettingsApplied` (which would fire per-keystroke and risks running structural ECS changes off the PrefabUpdate phase), there's an explicit "Apply settings" button on the Default Colors tab. Click → `Mod.RequestLiveApply()` flips a `volatile bool` (`m_NeedsLiveApply`) in the system → next `OnUpdate` (PrefabUpdate phase, safe) handles both the prefab-side update and the in-world refresh. No event hooks, no debouncing. Confirmed working: live refresh of in-world cars on Apply (master ON and OFF), and clean uninstall — disabling/removing the mod returns every in-world car to vanilla colors on next launch (we only mutate runtime prefab buffers, never save data).
+
+- **Master ON + Apply:** bulk-remove `RebalancedTag` from every civilian-vehicle prefab via `EntityManager.RemoveComponent<T>(query)` → rebalance pass picks them back up with current slider values.
+- **Master OFF + Apply:** walk every still-tagged prefab, trim custom-color appends back to `OriginalColorVariationCount.Value`, restore each entry's `m_Probability` from the `m_OrigProbabilities` snapshot, then strip the tag. The Apply button is visible regardless of the master toggle so this path is reachable.
+- **In-world refresh (both paths):** after the prefab buffers are at their final state, query every entity with `Game.Vehicles.Vehicle + MeshColor + PrefabRef`, filter to civilian-vehicle prefabs (same predicate as rebalance: `CarData` + any of `PersonalCarData/DeliveryTruckData/CargoTransportVehicleData/CarTrailerData`, minus standalone trailers and trucks-when-disabled), and bulk-add `BatchesUpdated`. That puts each instance on `MeshColorSystem.m_UpdateQuery`, which re-runs `SetMeshColorsJob` next frame — the per-entity RNG seed is fixed so the new pick is deterministic from the new probabilities.
 
 Next: see `TODO.md` "Next session" section. Tomorrow's first task is **release on PDX Mods**.
 
@@ -61,7 +66,7 @@ Next: see `TODO.md` "Next session" section. Tomorrow's first task is **release o
 ## Settings layout (current)
 
 - Tab `General`: master on/off, "include civilian trucks" toggle.
-- Tab `Default Colors`: "Use custom color values" toggle (default OFF — `GetBucketWeight` returns hardcoded real-world weights, sliders hidden); ON exposes the sliders + a "Reset color sliders" button. Toggling never modifies slider values; user presses Reset to restore the recommended mix. All hidden when master off; sliders + reset button additionally hidden when the toggle is OFF.
+- Tab `Default Colors`: "Use custom color values" toggle (default OFF — `GetBucketWeight` returns hardcoded real-world weights, sliders hidden); ON exposes the sliders + a "Reset color sliders" button. Toggling never modifies slider values; user presses Reset to restore the recommended mix. Above all of that sits the "Apply settings" button (hidden only when master off) which triggers a live re-rebalance without a game restart.
 - Tab `Custom Colors`: 3 slots, each = name + hex code + probability slider, hidden when master off. Hex inputs carry a `[SettingsUIWarning]` that fires when probability > 0 but the hex fails `ColorClassifier.TryParseHex`.
 - Tab `Debug`: one-shot CSV dump toggle.
 
@@ -88,7 +93,7 @@ Per-prefab spawn weight: `PersonalCarData.m_Probability` (consumed by `PersonalC
 - `EntityManager.AddComponentData(e, ...)` triggers an archetype move on `e`. Any `DynamicBuffer<T>` you grabbed via `GetBuffer<T>(e)` BEFORE the structural change is **invalidated** — re-fetch immediately after. Symptom: crash inside `Buffer.Memcpy` from `DynamicBuffer.get_Item`.
 - `SystemUpdatePhase.PrefabUpdate` is invoked from `PrefabSystem.OnUpdate` (which runs every frame in `MainLoop`). Safe phase for one-shot prefab edits.
 - `PrefabSystem.GetPrefabName(Entity)` resolves a prefab entity's authoring name — useful for logging/CSV.
-- **Main menu → load is NOT a clean reset.** Verified empirically: prefab entities + their `RebalancedTag` persist across main-menu transitions. Settings changes only re-apply after a full game restart. `OnDispose` fires on game quit, not on main-menu navigation. (For a v2 live-update path, the system itself needs to remove `RebalancedTag` when settings change rather than relying on world teardown.)
+- **Main menu → load is NOT a clean reset.** Verified empirically: prefab entities + their `RebalancedTag` persist across main-menu transitions. `OnDispose` fires on game quit, not on main-menu navigation. The `live-update` branch addresses this by exposing an "Apply settings" button that bulk-removes `RebalancedTag` from every civilian-vehicle prefab so the rebalance query picks them up again — no need to restart for newly spawned cars to use new sliders.
 
 ## Diagnostic dump
 
