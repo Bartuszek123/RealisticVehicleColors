@@ -13,3 +13,6 @@ _research/decompiled/
 
 # Local Claude Code state
 .claude/
+
+# Markdown notes (CLAUDE.md, TODO.md, WIKI.md, _research/*.md)
+*.md
