@@ -16,3 +16,6 @@ _research/decompiled/
 
 # Markdown notes (CLAUDE.md, TODO.md, WIKI.md, _research/*.md)
 *.md
+
+# Local scratch/import folder (screenshots, drafts not for repo)
+import/
