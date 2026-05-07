@@ -10,40 +10,42 @@
 	<LongDescription>
 # What it does
 
-Vanilla traffic in Cities: Skylines II spawns cars from a roughly uniform color palette, so streets end up looking far more colorful than the real world. **Realistic Vehicle Colors** rebalances the spawn weights to match real-world car-color statistics — mostly white, black, grey and silver, with the rest spread across reds, blues, greens and the occasional bright color.
+Vanilla traffic in Cities: Skylines II spawns cars from a roughly uniform color palette, so streets end up looking far more colorful than the real world. **Realistic Vehicle Colors** rebalances the spawn weights to match real-world car-color statistics — mostly white, black, grey and silver.
 
 # Features
 
 - **Real-world defaults** for ten color buckets, on by default.
 - **Per-color sliders** to tune the mix yourself: White, Black, Grey, Silver, Red, Blue, Brown / Beige, Green, Yellow and Other.
 - **Three custom color slots** — pick any hex code and a probability. Great for adding rare colors (orange, teal, magenta) or making a fleet your own.
-- **Apply settings live** without restarting the game. Newly spawned vehicles use the new mix immediately.
-- **Reset color sliders** button restores the recommended real-world mix.
+- **Apply settings live** - all cars will change their color instantly.
 - **Camper trailers** are restricted to white and brown to match how they actually look on the road.
+- **Clean removal** — disabling or uninstalling the mod instantly restores every car to the game's original colors.
 
 # Scope
 
-Affects civilian road vehicles: personal cars, delivery vans, cargo trucks, food-delivery scooters, campers and bicycles.
+Affects civilian road vehicles: personal cars, food-delivery scooters, campers and bicycles.
 
 Service vehicles (police, fire, ambulance, garbage, post, taxi, transit), farm equipment, semi-trailers, trains, ships and airplanes are left at their stock paintwork.
 
 # Notes
 
-- Cars already on the map keep their old color until they despawn — only newly spawned vehicles use the updated mix. Most fleets rotate within a few minutes of in-game time at 3× speed.
+- Trucks and delivery vans are technically civilian vehicles, but their colors are often determined by the company that owns them. However, if there's demand for it I can add a toggle for them in a future update.
 - Settings persist between sessions in `ModsSettings/RealisticVehicleColors/`.
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
 	<!--Screenshot, can be set multiple times-->
-	<Screenshot Value="" />
+	<Screenshot Value="Properties/Untitled.png" />
+	<Screenshot Value="Properties/Untitled2.png" />
+	<Screenshot Value="Properties/Untitled3.png" />
 	<!--Tag, can be set multiple times-->
-	<Tag Value="" />
+	<Tag Value="Code Mod" />
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.0" />
+	<ModVersion Value="1.0.0" />
 	<!--Recommended version of the base game to use the mod-->
-	<GameVersion Value="1.0.*" />
+	<GameVersion Value="1.5.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="" />
 	<!--Required DLC, can be set multiple times. Supported values are "Landmark Buildings", "San Fransisco Set", "Beach Properties", "Urban Promenades", "Modern Architecture"-->
@@ -55,7 +57,7 @@ v1.0 — initial release.
 
 - Real-world color rebalance for civilian vehicles.
 - Ten per-color sliders + three custom color slots.
-- Apply settings live without restarting the game.
+- Apply settings live.
 - Reset color sliders to recommended real-world mix.
 - Camper trailer restriction (white / brown only).
 	</ChangeLog>

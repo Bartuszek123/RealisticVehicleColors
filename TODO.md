@@ -6,8 +6,21 @@ Planned features and follow-ups. Top section is a "pick this up first next sessi
 
 User decided 2026-05-06: finish remaining v1.x items first, release on PDX Mods last.
 
-1. **Better custom colors UX.** Today: 3 slots, each = name (text) + hex code (text input) + probability slider. Hex validation is in place (warning icon + locale text when probability > 0 but hex doesn't parse). Remaining pain points: no color preview swatch, no "enable this slot" toggle separate from probability=0. User to confirm scope.
-2. **Release on PDX Mods.** First publish: edit `Properties\PublishConfiguration.xml` (long description, changelog, ModId left blank), then VS2022 right-click → Publish → `PublishNewMod` profile. Console returns a ModID GUID; paste it back into XML for future updates. Requires being logged into PDX in-game once. See WIKI.md §1 for the publish-flow details.
+1. **Bump `ModVersion` to `1.0.0`** in `Properties/PublishConfiguration.xml`.
+
+2. **Remove `Custom1Name` / `Custom2Name` / `Custom3Name`** fields from `Setting.cs` and the corresponding locale entries in `LocaleEN.cs`. The name doesn't appear anywhere in-game, only in Options — it's clutter. Delete the property, the `[SettingsUITextInput]`, and all six locale entries (label + desc per slot). Also drop the `CustomNameDesc` constant in `LocaleEN.cs`. Persisted name strings in old `.coc` files will be silently ignored on load.
+
+3. **Review the `LongDescription`** in `Properties/PublishConfiguration.xml` — read aloud, edit anything that sounds AI-flavored or generic.
+
+4. **Review every Settings UI string** in `LocaleEN.cs` (labels, descriptions, warnings) — same review pass.
+
+5. **Better custom colors UX.** Today: 3 slots, each = hex code (text input) + probability slider. Hex validation is in place (warning icon + locale text when probability > 0 but hex doesn't parse). Remaining pain points: no color preview swatch, no "enable this slot" toggle separate from probability=0. User to confirm scope.
+
+6. **Fix % calculation for custom color slots.** Currently `GetTotalSliderWeight` always adds `Custom*Probability` when > 0, even when the hex is invalid. Fix: only count a custom slot's probability in the total when its hex is valid (`ColorClassifier.TryParseHex` passes). Also show the live `(~X%)` suffix on each custom-slot Probability slider label (same `MakeColorLabel`/`GetSliderVersion` pattern as the default-color sliders). No label needed on the hex field itself.
+
+7. **Adjust default color bucket weights.** Current defaults: White 26, Black 22, Grey 13, Silver 12, Blue 10, Red 9, Brown 4, Green 2, Yellow 1, Other 1. User wants these revisited — tune to better match observed in-game results or updated real-world stats.
+
+8. **Release on PDX Mods.** First publish: VS2022 right-click → Publish → `PublishNewMod` profile. Console returns a ModID GUID; paste it back into `<ModId>` for future updates. Requires being logged into PDX in-game once. See WIKI.md §1.
 
 ## v1.x — small additions
 
@@ -28,6 +41,7 @@ User decided 2026-05-06: finish remaining v1.x items first, release on PDX Mods 
 ## Nice-to-have
 
 - [x] **Quiet logs.** Heartbeat removed; system now logs OnCreate, dump path (when applicable), pass results, and errors only.
+- [ ] **Override brand-driven truck colors (delivery vans, semi-trucks, coal/oil trucks).** Verified 2026-05-06: those prefabs have `m_ExternalChannel0/1/2 >= 0` on their `ColorVariation` entries, which routes the picked color through `MeshColorSystem.SetColor` (lines ~768-825 in decompile) where channels are overwritten by `BrandData.m_ColorSet[i]` from the company that owns the truck. Our `m_Probability` rewrite picks differently but the visible color is forced to the company brand, so trucks appear unchanged. Two possible v2 fixes: (a) reset `m_ExternalChannel0/1/2` to `-1` on rebalanced entries so the picked entry's stored RGB renders directly — would defeat company paint entirely, simple; (b) leave the brand mechanism alone but also rewrite the entry's `m_ColorSet` channels from the slider buckets — would *blend* with brand override (set's own channel only renders where `m_ExternalChannel{i} == -1`), more nuanced. Worth a separate Settings toggle so users keep control. Unrelated to the existing `IncludeTrucks` toggle (which controls whether trucks are *attempted* at all). MotorbikeDelivery01 is unaffected — has 51 standalone variations, no external channels — and works today.
 - [ ] **Per-vehicle-type overrides.** Today the same slider set applies to every prefab. Could let users tune cars vs trucks separately (e.g., trucks more grey/silver).
 - [ ] **Dedicated orange bucket.** Currently orange falls into `Other`. The mod's tagline mentions "rare colors (orange) beyond the base palette" — make it a real first-class bucket once HSV cutoffs are tuned.
 - [ ] **Taxis: prius-heavy + mostly white.** Today taxis are excluded from rebalance entirely. Future option: bias the taxi prefab so most spawns pick the Prius-equivalent model, painted white (matches a lot of real-world taxi fleets). Needs locating the taxi prefab(s) and whatever drives model-vs-model selection — likely a separate `*Data` marker than `PersonalCarData` since taxis are a service vehicle. Probably wants its own toggle in Settings.

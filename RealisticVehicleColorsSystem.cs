@@ -171,7 +171,7 @@ namespace RealisticVehicleColors
             // MUST run after the prefab buffers above are at their final state.
             if (liveApply)
             {
-                try { MarkInstancesDirty(em, settings); }
+                try { MarkInstancesDirty(em); }
                 catch (Exception ex) { Mod.log.Error($"MarkInstancesDirty failed: {ex}"); }
             }
         }
@@ -224,7 +224,7 @@ namespace RealisticVehicleColors
         // Drift between the rebalance pass and the dirty-mark pass would silently
         // de-sync prefab edits from instance re-rolls — keep both call-sites here.
         // `isCamper`: CarTrailerData + PersonalCarData → restrict to white/brown.
-        private static bool ShouldRebalancePrefab(EntityManager em, Entity prefab, bool includeTrucks, out bool isCamper)
+        private static bool ShouldRebalancePrefab(EntityManager em, Entity prefab, out bool isCamper)
         {
             isCamper = false;
             if (!em.HasComponent<CarData>(prefab)) return false;
@@ -237,8 +237,6 @@ namespace RealisticVehicleColors
             // reflects the cargo company, not the driver, and agri trailers ship
             // with a single variation anyway.
             if (isTrailer && !isCar) return false;
-            bool isTruck = isDelivery || isCargo;
-            if (isTruck && !isCar && !includeTrucks) return false;
             isCamper = isCar && isTrailer;
             return true;
         }
@@ -253,7 +251,7 @@ namespace RealisticVehicleColors
                 for (int i = 0; i < prefabCount; i++)
                 {
                     Entity prefab = entities[i];
-                    if (ShouldRebalancePrefab(em, prefab, settings.IncludeTrucks, out bool isCamper))
+                    if (ShouldRebalancePrefab(em, prefab, out bool isCamper))
                     {
                         var subMeshes = em.GetBuffer<SubMesh>(prefab, isReadOnly: true);
                         for (int s = 0; s < subMeshes.Length; s++)
@@ -333,7 +331,7 @@ namespace RealisticVehicleColors
         // BatchesUpdated puts the instance on MeshColorSystem.m_UpdateQuery, which
         // re-runs SetMeshColorsJob and re-picks from the updated ColorVariation
         // buffer. Without it, instances stay on the MeshColor cached at spawn.
-        private void MarkInstancesDirty(EntityManager em, Setting settings)
+        private void MarkInstancesDirty(EntityManager em)
         {
             var entities = m_VehicleInstanceQuery.ToEntityArray(Allocator.Temp);
             var dirty = new NativeList<Entity>(entities.Length, Allocator.Temp);
@@ -344,7 +342,7 @@ namespace RealisticVehicleColors
                     Entity inst = entities[i];
                     Entity prefab = em.GetComponentData<PrefabRef>(inst).m_Prefab;
                     if (prefab == Entity.Null) continue;
-                    if (!ShouldRebalancePrefab(em, prefab, settings.IncludeTrucks, out _)) continue;
+                    if (!ShouldRebalancePrefab(em, prefab, out _)) continue;
                     dirty.Add(inst);
                 }
                 if (dirty.Length > 0)

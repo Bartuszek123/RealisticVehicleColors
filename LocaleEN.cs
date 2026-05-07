@@ -16,8 +16,6 @@ namespace RealisticVehicleColors
             "Six-digit hex code, like F58025 (with or without a leading #). Any online color picker can give you one. Leave the field empty or set Probability to 0 to turn this slot off.";
         private const string CustomHexWarning =
             "This hex code is empty or invalid. The slot will be skipped until you enter a valid six-digit hex (e.g. F58025), or set Probability back to 0 to silence this warning.";
-        private const string CustomNameDesc =
-            "A name you'll recognise for this color. Shown only here in Options — it doesn't appear anywhere in-game.";
         private const string CustomProbabilityDesc =
             "How often cars get this custom color. Works just like the sliders on the Default Colors tab and competes against them. Set to 0 to turn this slot off.";
 
@@ -44,18 +42,15 @@ namespace RealisticVehicleColors
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Enabled)),      "Enabled" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Enabled)),       "Main on/off switch for the whole mod. Turn off to leave vehicle colors at the game's stock palette. Restart the game for the change to fully apply." },
 
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.IncludeTrucks)),"Include trucks and vans" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.IncludeTrucks)), "Apply the new colors to delivery vans, cargo trucks and food-delivery scooters too. Service vehicles (police, fire, ambulance, garbage, post, taxi, transit) and farm equipment are never touched." },
-
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.UseCustomColors)), "Use custom color values" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.UseCustomColors)),  "Off: the mod picks the color mix automatically using real-world car-color statistics. On: the sliders below appear so you can tune the mix yourself. " + SliderHowItWorks },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.UseCustomColors)), "Every color slider is at 0, so the mod can't pick anything. Traffic will fall back to a uniform mix of stock colors. Move at least one slider above 0, or press Reset color sliders." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ApplySettings)),   "Apply settings" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Push your sliders, custom colors and toggles to the game right away — no restart needed. Cars already on the map re-roll their color so the change is visible immediately. With the mod turned off, this restores the stock color mix on every car." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Apply your sliders, custom colors and toggles to the game. Cars already on the map re-roll their color so the change is visible immediately. With the mod disabled, this restores the vanilla color mix on every car." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetToDefaults)), "Reset color sliders" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Put every color slider back to the mod's recommended real-world values. Custom-color slots and the other settings are left alone. Press Apply settings afterwards to push the change to the game." },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Put every color slider back to the mod's recommended real-world values. Custom-color slots and the other settings are left alone. Press Apply settings afterwards to apply the change to the game. Disable the mod and press apply settings to revert to vanilla" },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.ResetToDefaults)),"All your slider tweaks will be replaced with the mod's recommended values. Continue?" },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.DumpColorVariations)),"Dump color variations" },
@@ -91,24 +86,18 @@ namespace RealisticVehicleColors
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Other)),        "Other" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Other)),         "How often unusual colors appear — orange, purple, magenta, pink and anything else that doesn't fit the buckets above." },
 
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Name)),  "Name" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Name)),   CustomNameDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Hex)),   "Hex code" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Hex)),    CustomHexDesc },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom1Hex)), CustomHexWarning },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Probability)), "Probability" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Probability)),  CustomProbabilityDesc },
 
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Name)),  "Name" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Name)),   CustomNameDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Hex)),   "Hex code" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Hex)),    CustomHexDesc },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom2Hex)), CustomHexWarning },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Probability)), "Probability" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Probability)),  CustomProbabilityDesc },
 
-                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom3Name)),  "Name" },
-                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom3Name)),   CustomNameDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom3Hex)),   "Hex code" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom3Hex)),    CustomHexDesc },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom3Hex)), CustomHexWarning },

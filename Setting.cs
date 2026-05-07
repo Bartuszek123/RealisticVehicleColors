@@ -30,10 +30,6 @@ namespace RealisticVehicleColors
         [SettingsUISection(GeneralTab, MainGroup)]
         public bool Enabled { get; set; }
 
-        [SettingsUISection(GeneralTab, MainGroup)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
-        public bool IncludeTrucks { get; set; }
-
         // ── Debug ──────────────────────────────────────────────────────────────
         [SettingsUISection(DebugTab, DebugGroup)]
         public bool DumpColorVariations { get; set; }
@@ -135,23 +131,15 @@ namespace RealisticVehicleColors
         [SettingsUITextInput]
         [SettingsUISection(CustomColorsTab, Slot1Group)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
-        public string Custom1Name { get; set; }
-
-        [SettingsUITextInput]
-        [SettingsUISection(CustomColorsTab, Slot1Group)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
         [SettingsUIWarning(typeof(Setting), nameof(IsCustom1HexInvalid))]
         public string Custom1Hex { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(CustomColorsTab, Slot1Group)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom1Label))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Custom1Probability { get; set; }
-
-        [SettingsUITextInput]
-        [SettingsUISection(CustomColorsTab, Slot2Group)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
-        public string Custom2Name { get; set; }
 
         [SettingsUITextInput]
         [SettingsUISection(CustomColorsTab, Slot2Group)]
@@ -162,12 +150,9 @@ namespace RealisticVehicleColors
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(CustomColorsTab, Slot2Group)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom2Label))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Custom2Probability { get; set; }
-
-        [SettingsUITextInput]
-        [SettingsUISection(CustomColorsTab, Slot3Group)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
-        public string Custom3Name { get; set; }
 
         [SettingsUITextInput]
         [SettingsUISection(CustomColorsTab, Slot3Group)]
@@ -178,6 +163,8 @@ namespace RealisticVehicleColors
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(CustomColorsTab, Slot3Group)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom3Label))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Custom3Probability { get; set; }
 
         // ── Helpers ────────────────────────────────────────────────────────────
@@ -199,18 +186,17 @@ namespace RealisticVehicleColors
         public bool IsCustom2HexInvalid() => Custom2Probability > 0 && !ColorClassifier.TryParseHex(Custom2Hex, out _);
         public bool IsCustom3HexInvalid() => Custom3Probability > 0 && !ColorClassifier.TryParseHex(Custom3Hex, out _);
 
-        // Live "(~X%)" suffix on each color slider's label. Total denominator includes
-        // both default-color sliders and any custom slot with probability > 0 — that
-        // matches what AppendCustom does in Rebalance, so the displayed % stays close
-        // to what the user actually sees in traffic. Hex validity isn't checked here:
-        // if a slot has probability > 0 but a broken hex it still pulls share away in
-        // intent — the [SettingsUIWarning] on the hex field handles that misconfig.
+        // Live "(~X%)" suffix on each color slider's label. Custom slots only count
+        // toward the total when their hex parses — invalid slots are dropped at
+        // rebalance time (AppendCustom skips them), so including them here would
+        // shrink every other slider's displayed share for a slot that contributes
+        // nothing in traffic.
         private int GetTotalSliderWeight()
         {
             int total = White + Black + Grey + Silver + Red + Blue + Brown + Green + Yellow + Other;
-            if (Custom1Probability > 0) total += Custom1Probability;
-            if (Custom2Probability > 0) total += Custom2Probability;
-            if (Custom3Probability > 0) total += Custom3Probability;
+            if (Custom1Probability > 0 && ColorClassifier.TryParseHex(Custom1Hex, out _)) total += Custom1Probability;
+            if (Custom2Probability > 0 && ColorClassifier.TryParseHex(Custom2Hex, out _)) total += Custom2Probability;
+            if (Custom3Probability > 0 && ColorClassifier.TryParseHex(Custom3Hex, out _)) total += Custom3Probability;
             return total;
         }
 
@@ -234,6 +220,19 @@ namespace RealisticVehicleColors
         public LocalizedString GetYellowLabel() => MakeColorLabel("Yellow",        Yellow);
         public LocalizedString GetOtherLabel()  => MakeColorLabel("Other",         Other);
 
+        // Custom slot label: shows "(~X%)" only when the slot is actually going to
+        // contribute — probability above 0 AND a parseable hex. Otherwise it's just
+        // "Probability" so the user isn't told a misconfigured slot has any share.
+        private LocalizedString MakeCustomSlotLabel(string hex, int weight)
+        {
+            if (weight <= 0 || !ColorClassifier.TryParseHex(hex, out _))
+                return LocalizedString.Value("Probability");
+            return MakeColorLabel("Probability", weight);
+        }
+        public LocalizedString GetCustom1Label() => MakeCustomSlotLabel(Custom1Hex, Custom1Probability);
+        public LocalizedString GetCustom2Label() => MakeCustomSlotLabel(Custom2Hex, Custom2Probability);
+        public LocalizedString GetCustom3Label() => MakeCustomSlotLabel(Custom3Hex, Custom3Probability);
+
         // Version bumps any time something the labels depend on changes, so the
         // settings-UI widget re-evaluates the dynamic display name. Including custom
         // probabilities since they shift the denominator.
@@ -255,6 +254,9 @@ namespace RealisticVehicleColors
                 h = h * 31 + Custom1Probability;
                 h = h * 31 + Custom2Probability;
                 h = h * 31 + Custom3Probability;
+                h = h * 31 + (Custom1Hex?.GetHashCode() ?? 0);
+                h = h * 31 + (Custom2Hex?.GetHashCode() ?? 0);
+                h = h * 31 + (Custom3Hex?.GetHashCode() ?? 0);
                 return h;
             }
         }
@@ -263,14 +265,14 @@ namespace RealisticVehicleColors
         // and as the live values when UseCustomColors is OFF.
         private static int DefaultBucketWeight(ColorBucket b) => b switch
         {
-            ColorBucket.White  => 26,
-            ColorBucket.Black  => 22,
-            ColorBucket.Grey   => 13,
-            ColorBucket.Silver => 12,
-            ColorBucket.Blue   => 10,
-            ColorBucket.Red    => 9,
+            ColorBucket.White  => 28,
+            ColorBucket.Black  => 19,
+            ColorBucket.Grey   => 18,
+            ColorBucket.Silver => 11,
+            ColorBucket.Blue   => 8,
+            ColorBucket.Red    => 7,
             ColorBucket.Brown  => 4,
-            ColorBucket.Green  => 2,
+            ColorBucket.Green  => 3,
             ColorBucket.Yellow => 1,
             ColorBucket.Other  => 1,
             _ => 0,
@@ -312,15 +314,14 @@ namespace RealisticVehicleColors
         public override void SetDefaults()
         {
             Enabled = true;
-            IncludeTrucks = true;
             DumpColorVariations = false;
             UseCustomColors = false;
 
             SetDefaultColorWeights();
 
-            Custom1Name = ""; Custom1Hex = ""; Custom1Probability = 0;
-            Custom2Name = ""; Custom2Hex = ""; Custom2Probability = 0;
-            Custom3Name = ""; Custom3Hex = ""; Custom3Probability = 0;
+            Custom1Hex = ""; Custom1Probability = 0;
+            Custom2Hex = ""; Custom2Probability = 0;
+            Custom3Hex = ""; Custom3Probability = 0;
         }
     }
 }
