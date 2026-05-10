@@ -43,7 +43,7 @@ Service vehicles (police, fire, ambulance, garbage, post, taxi, transit), farm e
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.0.0" />
+	<ModVersion Value="1.0.1" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.5.*" />
 	<!--Dependency for the mod, can be set multiple times-->
@@ -53,6 +53,12 @@ Service vehicles (police, fire, ambulance, garbage, post, taxi, transit), farm e
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
 	<!--<ChangeLog Value="" />-->
 	<ChangeLog>
+v1.0.1 — bug fixes.
+
+- Equal sliders now produce equal traffic share. Previously, small sliders for buckets with many stock variations (e.g. Blue) rounded to zero per entry and vanished from traffic.
+- Submeshes with no variations in any enabled bucket now fall back to their vanilla colors instead of a uniform random pick across off-bucket colors. No more stray off-color cars when narrowing the palette.
+- Camper trailer restriction (white / brown only) is now always on, even when both sliders are zero.
+
 v1.0 — initial release.
 
 - Real-world color rebalance for civilian vehicles.

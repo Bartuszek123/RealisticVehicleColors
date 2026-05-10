@@ -260,7 +260,8 @@ namespace RealisticVehicleColors
                             if (sub == Entity.Null) continue;
                             if (!em.HasBuffer<ColorVariation>(sub)) continue;
                             SnapshotOriginalProbabilities(em, sub);
-                            Rebalance(em, sub, settings, isCamper);
+                            m_OrigProbabilities.TryGetValue(sub, out var origProbs);
+                            Rebalance(em, sub, settings, origProbs, isCamper);
                             touchedSubMeshes++;
                         }
                     }
@@ -310,14 +311,24 @@ namespace RealisticVehicleColors
         private bool RestoreSubMesh(EntityManager em, Entity sub)
         {
             var buffer = em.GetBuffer<ColorVariation>(sub);
-            // Trim any custom-color appends so the buffer matches the stock layout.
-            if (em.HasComponent<OriginalColorVariationCount>(sub))
-            {
-                int origCount = em.GetComponentData<OriginalColorVariationCount>(sub).Value;
-                if (buffer.Length > origCount)
-                    buffer.RemoveRange(origCount, buffer.Length - origCount);
-            }
+            int origCount = em.HasComponent<OriginalColorVariationCount>(sub)
+                ? em.GetComponentData<OriginalColorVariationCount>(sub).Value
+                : buffer.Length;
             if (!m_OrigProbabilities.TryGetValue(sub, out var snap)) return false;
+            RestoreFromSnapshot(buffer, origCount, snap);
+            return true;
+        }
+
+        // Trim any custom-color appends past the stock layout, then copy the
+        // snapshotted m_Probability values back over the surviving entries.
+        // Shared between live restore (master OFF Apply) and the rebalance
+        // failsafe (totalSum==0 — submesh has no entries in any user-enabled
+        // bucket, so we replay vanilla probabilities instead of crashing the
+        // weighted sampler).
+        private static void RestoreFromSnapshot(DynamicBuffer<ColorVariation> buffer, int origCount, byte[] snap)
+        {
+            if (buffer.Length > origCount)
+                buffer.RemoveRange(origCount, buffer.Length - origCount);
             int n = Math.Min(buffer.Length, snap.Length);
             for (int i = 0; i < n; i++)
             {
@@ -325,7 +336,6 @@ namespace RealisticVehicleColors
                 entry.m_Probability = snap[i];
                 buffer[i] = entry;
             }
-            return true;
         }
 
         // BatchesUpdated puts the instance on MeshColorSystem.m_UpdateQuery, which
@@ -410,19 +420,10 @@ namespace RealisticVehicleColors
             return "\"" + s.Replace("\"", "\"\"") + "\"";
         }
 
-        private static void Rebalance(EntityManager em, Entity sub, Setting settings, bool restrictToWhiteBrown = false)
+        private static void Rebalance(EntityManager em, Entity sub, Setting settings, byte[] origProbs, bool restrictToWhiteBrown = false)
         {
             var buffer = em.GetBuffer<ColorVariation>(sub);
             if (buffer.Length == 0) return;
-
-            // Pre-failsafe: camper restriction would zero everything if both whitelist
-            // sliders are 0 — drop the restriction so the prefab still gets picked.
-            if (restrictToWhiteBrown
-                && settings.GetBucketWeight(ColorBucket.White) == 0
-                && settings.GetBucketWeight(ColorBucket.Brown) == 0)
-            {
-                restrictToWhiteBrown = false;
-            }
 
             int originalCount;
             if (em.HasComponent<OriginalColorVariationCount>(sub))
@@ -440,8 +441,17 @@ namespace RealisticVehicleColors
                 buffer = em.GetBuffer<ColorVariation>(sub);
             }
 
-            var bucketCount = new NativeArray<int>(10, Allocator.Temp);
+            const int BucketEnumCount = 10;
+            var bucketCount = new NativeArray<int>(BucketEnumCount, Allocator.Temp);
             var assigned = new NativeArray<int>(originalCount, Allocator.Temp);
+            // Per-bucket base share + leftover after integer division. Naive
+            // weight/count truncates to 0 whenever weight < count (e.g. Blue
+            // slider=8 with ~10 blue variations per submesh → every blue entry
+            // gets 0 → bucket vanishes). Distribute the remainder across the
+            // first `weight % count` entries so the bucket total stays ≈ weight.
+            var bucketBase = new NativeArray<int>(BucketEnumCount, Allocator.Temp);
+            var bucketRem = new NativeArray<int>(BucketEnumCount, Allocator.Temp);
+            var bucketSeen = new NativeArray<int>(BucketEnumCount, Allocator.Temp);
             try
             {
                 for (int i = 0; i < originalCount; i++)
@@ -451,15 +461,36 @@ namespace RealisticVehicleColors
                     bucketCount[(int)b]++;
                 }
 
+                // Camper restriction is unconditional. If the user zeroed both white and
+                // brown sliders, force each to a minimum (uniform pick across white+brown
+                // stock variations) so totalSum stays >0 and the failsafe doesn't restore
+                // the full vanilla mix — that would let any color render and defeat the
+                // restriction.
+                bool forceMinWeight = restrictToWhiteBrown
+                    && settings.GetBucketWeight(ColorBucket.White) == 0
+                    && settings.GetBucketWeight(ColorBucket.Brown) == 0;
+
+                for (int b = 0; b < BucketEnumCount; b++)
+                {
+                    var bucket = (ColorBucket)b;
+                    int weight = settings.GetBucketWeight(bucket);
+                    if (restrictToWhiteBrown && bucket != ColorBucket.White && bucket != ColorBucket.Brown)
+                        weight = 0;
+                    else if (forceMinWeight && (bucket == ColorBucket.White || bucket == ColorBucket.Brown))
+                        weight = 1;
+                    int count = bucketCount[b];
+                    if (count > 0)
+                    {
+                        bucketBase[b] = weight / count;
+                        bucketRem[b] = weight % count;
+                    }
+                }
+
                 for (int i = 0; i < originalCount; i++)
                 {
-                    var b = (ColorBucket)assigned[i];
-                    int weight = settings.GetBucketWeight(b);
-                    // Camper-style trailer: mask everything except white + brown.
-                    if (restrictToWhiteBrown && b != ColorBucket.White && b != ColorBucket.Brown)
-                        weight = 0;
-                    int count = bucketCount[(int)b];
-                    int per = count > 0 ? Mathf.Clamp(weight / count, 0, 100) : 0;
+                    int b = assigned[i];
+                    int idx = bucketSeen[b]++;
+                    int per = bucketBase[b] + (idx < bucketRem[b] ? 1 : 0);
 
                     var entry = buffer[i];
                     entry.m_Probability = (byte)per;
@@ -470,6 +501,9 @@ namespace RealisticVehicleColors
             {
                 bucketCount.Dispose();
                 assigned.Dispose();
+                bucketBase.Dispose();
+                bucketRem.Dispose();
+                bucketSeen.Dispose();
             }
 
             AppendCustom(buffer, settings.Custom1Hex, settings.Custom1Probability);
@@ -478,16 +512,29 @@ namespace RealisticVehicleColors
 
             // Post-failsafe: MeshColorSystem's weighted reservoir sampler crashes if a
             // group's total probability is 0 (random.NextInt(0)). If every entry ended
-            // up at 0, fall back to vanilla-uniform 100 across the whole buffer.
+            // up at 0 — typically because this submesh has no stock variations in any
+            // of the user's enabled buckets (e.g. a moped/accent submesh whose colors
+            // all classify into buckets the user set to 0) — restore stock probabilities
+            // so the submesh shows its vanilla mix instead of a uniform random pick
+            // across off-bucket colors.
             int totalSum = 0;
             for (int i = 0; i < buffer.Length; i++) totalSum += buffer[i].m_Probability;
             if (totalSum == 0)
             {
-                for (int i = 0; i < buffer.Length; i++)
+                if (origProbs != null)
                 {
-                    var e = buffer[i];
-                    e.m_Probability = 100;
-                    buffer[i] = e;
+                    RestoreFromSnapshot(buffer, originalCount, origProbs);
+                }
+                else
+                {
+                    // Snapshot missing (shouldn't happen — we always snapshot before
+                    // rebalance). Last-resort uniform to avoid the NextInt(0) crash.
+                    for (int i = 0; i < buffer.Length; i++)
+                    {
+                        var e = buffer[i];
+                        e.m_Probability = 100;
+                        buffer[i] = e;
+                    }
                 }
             }
         }
