@@ -265,13 +265,13 @@ namespace RealisticVehicleColors
         // and as the live values when UseCustomColors is OFF.
         private static int DefaultBucketWeight(ColorBucket b) => b switch
         {
-            ColorBucket.White  => 28,
-            ColorBucket.Black  => 19,
-            ColorBucket.Grey   => 18,
-            ColorBucket.Silver => 11,
-            ColorBucket.Blue   => 8,
-            ColorBucket.Red    => 7,
-            ColorBucket.Brown  => 4,
+            ColorBucket.White  => 33,
+            ColorBucket.Black  => 23,
+            ColorBucket.Grey   => 19,
+            ColorBucket.Silver => 8,
+            ColorBucket.Blue   => 6,
+            ColorBucket.Red    => 3,
+            ColorBucket.Brown  => 3,
             ColorBucket.Green  => 3,
             ColorBucket.Yellow => 1,
             ColorBucket.Other  => 1,

@@ -162,7 +162,7 @@ namespace RealisticVehicleColors
                 catch (Exception ex) { Mod.log.Error($"Dump pass failed: {ex}"); }
             }
 
-            if (enabled && !m_RebalanceQuery.IsEmptyIgnoreFilter)
+            if (enabled && m_RebalanceQuery.CalculateEntityCount() > 0)
             {
                 try { RunRebalancePass(em, settings); }
                 catch (Exception ex) { Mod.log.Error($"Rebalance pass failed: {ex}"); }
@@ -273,7 +273,8 @@ namespace RealisticVehicleColors
             {
                 entities.Dispose();
             }
-            Mod.log.Info($"Rebalance pass: {prefabCount} prefabs, {touchedSubMeshes} submeshes touched");
+            if (prefabCount > 0)
+                Mod.log.Info($"Rebalance pass: {prefabCount} prefabs, {touchedSubMeshes} submeshes touched");
         }
 
         // Without this, in-world cars stay frozen on the previous custom mix
