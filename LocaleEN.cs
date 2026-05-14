@@ -9,7 +9,6 @@ namespace RealisticVehicleColors
 
         private readonly Setting m_Setting;
 
-        // Shared text — sliders behave the same way across the Default and Custom tabs.
         private const string SliderHowItWorks =
             "These sliders are weights, not strict percentages — they don't have to add up to 100. The mod balances them for you.";
         private const string CustomHexDesc =

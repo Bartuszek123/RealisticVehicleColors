@@ -23,8 +23,7 @@ namespace RealisticVehicleColors
             Settings.SetDefaults();
             Settings.RegisterInOptionsUI();
             GameManager.instance.localizationManager.AddSource("en-US", new LocaleEN(Settings));
-            // Third arg must be a fresh defaults instance — properties matching it are NOT
-            // serialized, so passing Settings itself would suppress every save.
+
             var defaults = new Setting(this);
             defaults.SetDefaults();
             AssetDatabase.global.LoadSettings(nameof(RealisticVehicleColors), Settings, defaults);
