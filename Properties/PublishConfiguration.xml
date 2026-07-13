@@ -43,7 +43,7 @@ Service vehicles (police, fire, ambulance, garbage, post, taxi, transit), farm e
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/realistic-vehicle-colors.1921167" />
 	<!--Version of the mod-->
-	<ModVersion Value="1.0.4" />
+	<ModVersion Value="1.0.5" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Dependency for the mod, can be set multiple times-->
@@ -53,7 +53,9 @@ Service vehicles (police, fire, ambulance, garbage, post, taxi, transit), farm e
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
 	<!--<ChangeLog Value="" />-->
 	<ChangeLog>
-v1.0.4 — updated for game version 1.6. No gameplay changes.
+v1.0.5
+- Custom colors: each slot now has its own on/off switch, and the hex field previews which color your code resolves to.
+- New "Add missing colors" option: lets a color slider still work on car models that never came in that color (off by default).
 	</ChangeLog>
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
 	<ExternalLink Type="kofi" Url="https://ko-fi.com/bartuszek" />
