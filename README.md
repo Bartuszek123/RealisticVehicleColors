@@ -1,6 +1,6 @@
 # Realistic Vehicle Colors
 
-A [Cities: Skylines II](https://www.paradoxinteractive.com/games/cities-skylines-ii) mod that redistributes civilian vehicle colors in traffic to match real-world car-color statistics — mostly white, black, grey and silver — instead of the near-uniform palette the base game uses. It also adds rare colors (e.g. orange) beyond the stock palette and exposes per-color sliders in the in-game Options menu.
+A [Cities: Skylines II](https://www.paradoxinteractive.com/games/cities-skylines-ii) mod that redistributes civilian vehicle colors in traffic to match real-world car-color statistics — mostly white, black, grey and silver — instead of the near-uniform palette the base game uses. It exposes per-color sliders in the in-game Options menu, plus custom color slots for any hex code you like.
 
 **Published on PDX Mods:** [Realistic Vehicle Colors](https://mods.paradoxplaza.com/mods/143394) (ModID 143394)
 **Discussion:** [Paradox forum thread](https://forum.paradoxplaza.com/forum/threads/realistic-vehicle-colors.1921167)
@@ -11,7 +11,7 @@ This repository exists so the mod's source is fully public and auditable — not
 
 - **Real-world defaults** for ten color buckets, on by default.
 - **Per-color sliders** to tune the mix yourself: White, Black, Grey, Silver, Red, Blue, Brown / Beige, Green, Yellow and Other.
-- **Three custom color slots** — pick any hex code and a probability. Great for adding rare colors (orange, teal, magenta).
+- **Three custom color slots** — pick any hex code and a probability, to make a fleet your own.
 - **Apply settings live** — all cars change color instantly, no restart.
 - **Camper trailers** restricted to white and brown to match how they actually look on the road.
 - **Clean removal** — disabling or uninstalling the mod restores every car to the game's original colors. The mod only mutates runtime prefab buffers, never save data.
