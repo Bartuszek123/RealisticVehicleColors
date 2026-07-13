@@ -442,6 +442,15 @@ namespace RealisticVehicleColors
                 buffer = em.GetBuffer<ColorVariation>(sub);
             }
 
+            // Only synthesize missing colors in custom-color mode: in default mode
+            // every bucket is weighted, so synthesis would repaint every car in every
+            // color and destroy the realistic distribution.
+            bool synthesizeMissing = settings.SynthesizeMissingColors && settings.UseCustomColors;
+            // Only allocated when synthesis is on — the common (off) path adds nothing.
+            List<KeyValuePair<Color, int>> synthQueue = synthesizeMissing
+                ? new List<KeyValuePair<Color, int>>()
+                : null;
+
             const int BucketEnumCount = 10;
             var bucketCount = new NativeArray<int>(BucketEnumCount, Allocator.Temp);
             var assigned = new NativeArray<int>(originalCount, Allocator.Temp);
@@ -485,6 +494,15 @@ namespace RealisticVehicleColors
                         bucketBase[b] = weight / count;
                         bucketRem[b] = weight % count;
                     }
+                    else if (synthesizeMissing && weight > 0
+                             && ColorClassifier.TryRepresentativeColor(bucket, out var repr))
+                    {
+                        // No stock variation in this bucket, but the user weighted it
+                        // above zero — queue a synthetic stand-in carrying the whole
+                        // bucket weight so the slider has something to act on. Appended
+                        // after the assignment loop below (Add may realloc the buffer).
+                        synthQueue.Add(new KeyValuePair<Color, int>(repr, weight));
+                    }
                 }
 
                 for (int i = 0; i < originalCount; i++)
@@ -507,9 +525,17 @@ namespace RealisticVehicleColors
                 bucketSeen.Dispose();
             }
 
-            AppendCustom(buffer, settings.Custom1Hex, settings.Custom1Probability);
-            AppendCustom(buffer, settings.Custom2Hex, settings.Custom2Probability);
-            AppendCustom(buffer, settings.Custom3Hex, settings.Custom3Probability);
+            // Inject synthetic stand-ins for buckets the prefab lacks (empty-bucket
+            // synthesis). Done here, after the per-entry loop, since Add may realloc.
+            if (synthQueue != null)
+                for (int i = 0; i < synthQueue.Count; i++)
+                    AppendColorEntry(buffer, synthQueue[i].Key, synthQueue[i].Value);
+
+            // Custom slots contribute only when active (enabled + probability > 0 +
+            // parseable hex) — same predicate the UI uses for its percent labels.
+            if (settings.IsSlot1Active()) AppendCustom(buffer, settings.Custom1Hex, settings.Custom1Probability);
+            if (settings.IsSlot2Active()) AppendCustom(buffer, settings.Custom2Hex, settings.Custom2Probability);
+            if (settings.IsSlot3Active()) AppendCustom(buffer, settings.Custom3Hex, settings.Custom3Probability);
 
             // Post-failsafe: MeshColorSystem's weighted reservoir sampler crashes if a
             // group's total probability is 0 (random.NextInt(0)). If every entry ended
@@ -544,7 +570,15 @@ namespace RealisticVehicleColors
         {
             if (probability <= 0) return;
             if (!ColorClassifier.TryParseHex(hex, out var rgb)) return;
+            AppendColorEntry(buffer, rgb, probability);
+        }
 
+        // Append a new ColorVariation with the given RGB and probability, cloning the
+        // source-type / group / sync flags from the first stock entry so the injected
+        // color renders the same way the stock ones do (this is how custom colors have
+        // worked since v1). Shared by custom slots and empty-bucket synthesis.
+        private static void AppendColorEntry(DynamicBuffer<ColorVariation> buffer, Color rgb, int probability)
+        {
             ColorVariation template = buffer.Length > 0 ? buffer[0] : default;
             template.m_ColorSet = new ColorSet(rgb);
             template.m_Probability = (byte)Mathf.Clamp(probability, 0, 100);

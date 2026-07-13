@@ -121,6 +121,15 @@ namespace RealisticVehicleColors
         [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Other { get; set; }
 
+        // When on, any prefab missing a stock color in a bucket the user weighted
+        // above zero gets a synthetic stand-in variation injected, so e.g. the Red
+        // slider still produces red cars on models that never shipped a red variant.
+        // Only meaningful in custom-color mode (in default mode every bucket is
+        // weighted, which would repaint every car in every color).
+        [SettingsUISection(DefaultColorsTab, ColorsGroup)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
+        public bool SynthesizeMissingColors { get; set; }
+
         [SettingsUISection(DefaultColorsTab, ColorsGroup)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(AreColorSlidersHidden))]
         [SettingsUIButton]
@@ -128,41 +137,63 @@ namespace RealisticVehicleColors
         public bool ResetToDefaults { set { SetDefaultColorWeights(); } }
 
         // ── Custom colors ──────────────────────────────────────────────────────
-        [SettingsUITextInput]
+        // Each slot has an explicit Enable toggle. The hex + probability fields only
+        // appear once the slot is enabled, and a slot contributes to traffic only
+        // when enabled (probability=0 alone no longer silently disables it). The hex
+        // field's label doubles as a textual preview of the parsed color.
         [SettingsUISection(CustomColorsTab, Slot1Group)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        public bool Custom1Enabled { get; set; }
+
+        [SettingsUITextInput]
+        [SettingsUISection(CustomColorsTab, Slot1Group)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(IsSlot1Hidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom1HexLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         [SettingsUIWarning(typeof(Setting), nameof(IsCustom1HexInvalid))]
         public string Custom1Hex { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(CustomColorsTab, Slot1Group)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(IsSlot1Hidden))]
         [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom1Label))]
         [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Custom1Probability { get; set; }
 
-        [SettingsUITextInput]
         [SettingsUISection(CustomColorsTab, Slot2Group)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        public bool Custom2Enabled { get; set; }
+
+        [SettingsUITextInput]
+        [SettingsUISection(CustomColorsTab, Slot2Group)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(IsSlot2Hidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom2HexLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         [SettingsUIWarning(typeof(Setting), nameof(IsCustom2HexInvalid))]
         public string Custom2Hex { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(CustomColorsTab, Slot2Group)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(IsSlot2Hidden))]
         [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom2Label))]
         [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Custom2Probability { get; set; }
 
-        [SettingsUITextInput]
         [SettingsUISection(CustomColorsTab, Slot3Group)]
         [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        public bool Custom3Enabled { get; set; }
+
+        [SettingsUITextInput]
+        [SettingsUISection(CustomColorsTab, Slot3Group)]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(IsSlot3Hidden))]
+        [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom3HexLabel))]
+        [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         [SettingsUIWarning(typeof(Setting), nameof(IsCustom3HexInvalid))]
         public string Custom3Hex { get; set; }
 
         [SettingsUISlider(min = 0, max = 100, step = 1, unit = "integer")]
         [SettingsUISection(CustomColorsTab, Slot3Group)]
-        [SettingsUIHideByCondition(typeof(Setting), nameof(IsMasterDisabled))]
+        [SettingsUIHideByCondition(typeof(Setting), nameof(IsSlot3Hidden))]
         [SettingsUIDisplayName(typeof(Setting), nameof(GetCustom3Label))]
         [SettingsUIValueVersion(typeof(Setting), nameof(GetSliderVersion))]
         public int Custom3Probability { get; set; }
@@ -170,6 +201,20 @@ namespace RealisticVehicleColors
         // ── Helpers ────────────────────────────────────────────────────────────
         public bool IsMasterDisabled() => !Enabled;
         public bool AreColorSlidersHidden() => !Enabled || !UseCustomColors;
+
+        // A custom slot's hex + probability fields are shown only when the master
+        // switch is on AND that slot's Enable toggle is on.
+        public bool IsSlot1Hidden() => !Enabled || !Custom1Enabled;
+        public bool IsSlot2Hidden() => !Enabled || !Custom2Enabled;
+        public bool IsSlot3Hidden() => !Enabled || !Custom3Enabled;
+
+        // A slot actually contributes color to traffic only when enabled, given a
+        // positive probability and a parseable hex. Single source of truth reused by
+        // the label/percent/total helpers and (via the same three conditions) by the
+        // rebalance pass's AppendCustom calls.
+        public bool IsSlot1Active() => Custom1Enabled && Custom1Probability > 0 && ColorClassifier.TryParseHex(Custom1Hex, out _);
+        public bool IsSlot2Active() => Custom2Enabled && Custom2Probability > 0 && ColorClassifier.TryParseHex(Custom2Hex, out _);
+        public bool IsSlot3Active() => Custom3Enabled && Custom3Probability > 0 && ColorClassifier.TryParseHex(Custom3Hex, out _);
 
         // Warning fires only while UseCustomColors is on — when off, Rebalance
         // bypasses these sliders entirely and uses the hardcoded defaults instead.
@@ -179,24 +224,22 @@ namespace RealisticVehicleColors
             return White + Black + Grey + Silver + Red + Blue + Brown + Green + Yellow + Other == 0;
         }
 
-        // A custom slot warns only when the user has dialled probability above 0
-        // (so the slot is "on") but the hex code doesn't parse — meaning the slot
-        // would be silently dropped at load time.
-        public bool IsCustom1HexInvalid() => Custom1Probability > 0 && !ColorClassifier.TryParseHex(Custom1Hex, out _);
-        public bool IsCustom2HexInvalid() => Custom2Probability > 0 && !ColorClassifier.TryParseHex(Custom2Hex, out _);
-        public bool IsCustom3HexInvalid() => Custom3Probability > 0 && !ColorClassifier.TryParseHex(Custom3Hex, out _);
+        // A custom slot warns when it is enabled but the hex code doesn't parse —
+        // meaning the slot is switched on yet would be silently dropped at load time.
+        public bool IsCustom1HexInvalid() => Custom1Enabled && !ColorClassifier.TryParseHex(Custom1Hex, out _);
+        public bool IsCustom2HexInvalid() => Custom2Enabled && !ColorClassifier.TryParseHex(Custom2Hex, out _);
+        public bool IsCustom3HexInvalid() => Custom3Enabled && !ColorClassifier.TryParseHex(Custom3Hex, out _);
 
         // Live "(~X%)" suffix on each color slider's label. Custom slots only count
-        // toward the total when their hex parses — invalid slots are dropped at
-        // rebalance time (AppendCustom skips them), so including them here would
-        // shrink every other slider's displayed share for a slot that contributes
-        // nothing in traffic.
+        // toward the total when active (enabled + positive probability + parseable
+        // hex) — inactive slots contribute nothing in traffic, so including them
+        // would shrink every other slider's displayed share for nothing.
         private int GetTotalSliderWeight()
         {
             int total = White + Black + Grey + Silver + Red + Blue + Brown + Green + Yellow + Other;
-            if (Custom1Probability > 0 && ColorClassifier.TryParseHex(Custom1Hex, out _)) total += Custom1Probability;
-            if (Custom2Probability > 0 && ColorClassifier.TryParseHex(Custom2Hex, out _)) total += Custom2Probability;
-            if (Custom3Probability > 0 && ColorClassifier.TryParseHex(Custom3Hex, out _)) total += Custom3Probability;
+            if (IsSlot1Active()) total += Custom1Probability;
+            if (IsSlot2Active()) total += Custom2Probability;
+            if (IsSlot3Active()) total += Custom3Probability;
             return total;
         }
 
@@ -221,17 +264,30 @@ namespace RealisticVehicleColors
         public LocalizedString GetOtherLabel()  => MakeColorLabel("Other",         Other);
 
         // Custom slot label: shows "(~X%)" only when the slot is actually going to
-        // contribute — probability above 0 AND a parseable hex. Otherwise it's just
-        // "Probability" so the user isn't told a misconfigured slot has any share.
-        private LocalizedString MakeCustomSlotLabel(string hex, int weight)
+        // contribute (active). Otherwise it's just "Probability" so the user isn't
+        // told a misconfigured or off slot has any share.
+        private LocalizedString MakeCustomSlotLabel(bool active, int weight)
         {
-            if (weight <= 0 || !ColorClassifier.TryParseHex(hex, out _))
-                return LocalizedString.Value("Probability");
+            if (!active) return LocalizedString.Value("Probability");
             return MakeColorLabel("Probability", weight);
         }
-        public LocalizedString GetCustom1Label() => MakeCustomSlotLabel(Custom1Hex, Custom1Probability);
-        public LocalizedString GetCustom2Label() => MakeCustomSlotLabel(Custom2Hex, Custom2Probability);
-        public LocalizedString GetCustom3Label() => MakeCustomSlotLabel(Custom3Hex, Custom3Probability);
+        public LocalizedString GetCustom1Label() => MakeCustomSlotLabel(IsSlot1Active(), Custom1Probability);
+        public LocalizedString GetCustom2Label() => MakeCustomSlotLabel(IsSlot2Active(), Custom2Probability);
+        public LocalizedString GetCustom3Label() => MakeCustomSlotLabel(IsSlot3Active(), Custom3Probability);
+
+        // Textual color preview: the hex field's label reports which named color the
+        // entered code resolves to (best we can do — the settings UI has no visual
+        // color swatch widget). Falls back to a plain label when the hex is empty or
+        // malformed (the warning icon covers the invalid case).
+        private static LocalizedString MakeHexLabel(string hex)
+        {
+            if (ColorClassifier.TryParseHex(hex, out var c))
+                return LocalizedString.Value($"Hex code — looks {ColorClassifier.BucketName(ColorClassifier.Classify(c))}");
+            return LocalizedString.Value("Hex code");
+        }
+        public LocalizedString GetCustom1HexLabel() => MakeHexLabel(Custom1Hex);
+        public LocalizedString GetCustom2HexLabel() => MakeHexLabel(Custom2Hex);
+        public LocalizedString GetCustom3HexLabel() => MakeHexLabel(Custom3Hex);
 
         // Version bumps any time something the labels depend on changes, so the
         // settings-UI widget re-evaluates the dynamic display name. Including custom
@@ -254,6 +310,9 @@ namespace RealisticVehicleColors
                 h = h * 31 + Custom1Probability;
                 h = h * 31 + Custom2Probability;
                 h = h * 31 + Custom3Probability;
+                h = h * 31 + (Custom1Enabled ? 1 : 0);
+                h = h * 31 + (Custom2Enabled ? 1 : 0);
+                h = h * 31 + (Custom3Enabled ? 1 : 0);
                 h = h * 31 + (Custom1Hex?.GetHashCode() ?? 0);
                 h = h * 31 + (Custom2Hex?.GetHashCode() ?? 0);
                 h = h * 31 + (Custom3Hex?.GetHashCode() ?? 0);
@@ -316,12 +375,17 @@ namespace RealisticVehicleColors
             Enabled = true;
             DumpColorVariations = false;
             UseCustomColors = false;
+            SynthesizeMissingColors = false;
 
             SetDefaultColorWeights();
 
-            Custom1Hex = ""; Custom1Probability = 0;
-            Custom2Hex = ""; Custom2Probability = 0;
-            Custom3Hex = ""; Custom3Probability = 0;
+            // Default ON so upgrading users (whose .coc predates this key and thus
+            // loads it as the default) keep their already-configured custom colors.
+            // A fresh, unconfigured slot stays inert regardless — empty hex /
+            // probability 0 means it contributes nothing even while enabled.
+            Custom1Enabled = true; Custom1Hex = ""; Custom1Probability = 0;
+            Custom2Enabled = true; Custom2Hex = ""; Custom2Probability = 0;
+            Custom3Enabled = true; Custom3Hex = ""; Custom3Probability = 0;
         }
     }
 }

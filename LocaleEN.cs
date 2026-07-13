@@ -14,9 +14,11 @@ namespace RealisticVehicleColors
         private const string CustomHexDesc =
             "Six-digit hex code, like F58025 (with or without a leading #). Any online color picker can give you one. Leave the field empty or set Probability to 0 to turn this slot off.";
         private const string CustomHexWarning =
-            "This hex code is empty or invalid. The slot will be skipped until you enter a valid six-digit hex (e.g. F58025), or set Probability back to 0 to silence this warning.";
+            "This hex code is empty or invalid. The slot will be skipped until you enter a valid six-digit hex (e.g. F58025), or turn this slot off to silence this warning.";
         private const string CustomProbabilityDesc =
-            "How often cars get this custom color. Works just like the sliders on the Default Colors tab and competes against them. Set to 0 to turn this slot off.";
+            "How often cars get this custom color. Works just like the sliders on the Default Colors tab and competes against them.";
+        private const string CustomEnabledDesc =
+            "Turn this custom color slot on. While off, the slot is ignored completely even if it has a hex code and probability set — and its fields stay hidden.";
 
         public IEnumerable<KeyValuePair<string, string>> ReadEntries(
             IList<IDictionaryEntryError> errors,
@@ -47,6 +49,9 @@ namespace RealisticVehicleColors
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ApplySettings)),   "Apply settings" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.ApplySettings)),    "Apply your sliders, custom colors and toggles to the game. Cars already on the map re-roll their color so the change is visible immediately. With the mod disabled, this restores the vanilla color mix on every car." },
+
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.SynthesizeMissingColors)), "Add missing colors" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.SynthesizeMissingColors)),  "When a car model has no factory color in a bucket you've turned up, the mod injects a matching stand-in so the slider still works — for example a red version of a model that only ever shipped in white or grey. Off by default. Only affects the sliders above (custom color mode). Note: this can look less realistic, since it paints models in colors they never actually came in. Press Apply settings afterwards." },
 
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetToDefaults)), "Reset color sliders" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetToDefaults)),  "Put every color slider back to the mod's recommended real-world values. Custom-color slots and the other settings are left alone. Press Apply settings afterwards to apply the change to the game. Disable the mod and press apply settings to revert to vanilla" },
@@ -85,18 +90,24 @@ namespace RealisticVehicleColors
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Other)),        "Other" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Other)),         "How often unusual colors appear — orange, purple, magenta, pink and anything else that doesn't fit the buckets above." },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Enabled)), "Enable this slot" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Enabled)),  CustomEnabledDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Hex)),   "Hex code" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Hex)),    CustomHexDesc },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom1Hex)), CustomHexWarning },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom1Probability)), "Probability" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom1Probability)),  CustomProbabilityDesc },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Enabled)), "Enable this slot" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Enabled)),  CustomEnabledDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Hex)),   "Hex code" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Hex)),    CustomHexDesc },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom2Hex)), CustomHexWarning },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom2Probability)), "Probability" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom2Probability)),  CustomProbabilityDesc },
 
+                { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom3Enabled)), "Enable this slot" },
+                { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom3Enabled)),  CustomEnabledDesc },
                 { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Custom3Hex)),   "Hex code" },
                 { m_Setting.GetOptionDescLocaleID(nameof(Setting.Custom3Hex)),    CustomHexDesc },
                 { m_Setting.GetOptionWarningLocaleID(nameof(Setting.Custom3Hex)), CustomHexWarning },
