@@ -16,6 +16,8 @@ _research/decompiled/
 
 # Markdown notes (CLAUDE.md, TODO.md, WIKI.md, _research/*.md)
 *.md
+# ...but the public README is tracked
+!README.md
 
 # Local scratch/import folder (screenshots, drafts not for repo)
 import/
