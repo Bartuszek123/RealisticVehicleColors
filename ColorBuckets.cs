@@ -37,7 +37,7 @@ namespace RealisticVehicleColors
             if (h >= 15f && h < 45f && s < 0.5f) return ColorBucket.Brown;
 
             if (h >= 345f || h < 15f) return ColorBucket.Red;
-            if (h < 45f) return ColorBucket.Other;          // pure orange — no bucket assigned yet
+            if (h < 45f) return ColorBucket.Other;          
             if (h < 70f) return ColorBucket.Yellow;
             if (h < 165f) return ColorBucket.Green;
             if (h < 260f) return ColorBucket.Blue;
