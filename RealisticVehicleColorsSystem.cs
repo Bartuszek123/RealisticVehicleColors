@@ -246,6 +246,8 @@ namespace RealisticVehicleColors
             var entities = m_RebalanceQuery.ToEntityArray(Allocator.Temp);
             int prefabCount = entities.Length;
             int touchedSubMeshes = 0;
+            int synthesizedEntries = 0;
+            int submeshesWithSynth = 0;
             try
             {
                 for (int i = 0; i < prefabCount; i++)
@@ -261,7 +263,9 @@ namespace RealisticVehicleColors
                             if (!em.HasBuffer<ColorVariation>(sub)) continue;
                             SnapshotOriginalProbabilities(em, sub);
                             m_OrigProbabilities.TryGetValue(sub, out var origProbs);
-                            Rebalance(em, sub, settings, origProbs, isCamper);
+                            int synth = Rebalance(em, sub, settings, origProbs, isCamper);
+                            synthesizedEntries += synth;
+                            if (synth > 0) submeshesWithSynth++;
                             touchedSubMeshes++;
                         }
                     }
@@ -274,7 +278,8 @@ namespace RealisticVehicleColors
                 entities.Dispose();
             }
             if (prefabCount > 0)
-                Mod.log.Info($"Rebalance pass: {prefabCount} prefabs, {touchedSubMeshes} submeshes touched");
+                Mod.log.Info($"Rebalance pass: {prefabCount} prefabs, {touchedSubMeshes} submeshes touched, " +
+                             $"synthesized {synthesizedEntries} stand-in entries across {submeshesWithSynth} submeshes");
         }
 
         // Without this, in-world cars stay frozen on the previous custom mix
@@ -421,10 +426,13 @@ namespace RealisticVehicleColors
             return "\"" + s.Replace("\"", "\"\"") + "\"";
         }
 
-        private static void Rebalance(EntityManager em, Entity sub, Setting settings, byte[] origProbs, bool restrictToWhiteBrown = false)
+        // Returns how many synthetic stand-in entries were injected (0 unless
+        // empty-bucket synthesis is on and this submesh was missing a weighted
+        // bucket) — surfaced in the pass log so synthesis is observable.
+        private static int Rebalance(EntityManager em, Entity sub, Setting settings, byte[] origProbs, bool restrictToWhiteBrown = false)
         {
             var buffer = em.GetBuffer<ColorVariation>(sub);
-            if (buffer.Length == 0) return;
+            if (buffer.Length == 0) return 0;
 
             int originalCount;
             if (em.HasComponent<OriginalColorVariationCount>(sub))
@@ -564,6 +572,8 @@ namespace RealisticVehicleColors
                     }
                 }
             }
+
+            return synthQueue?.Count ?? 0;
         }
 
         private static void AppendCustom(DynamicBuffer<ColorVariation> buffer, string hex, int probability)
